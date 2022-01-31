@@ -1,90 +1,45 @@
-import { useEffect, useState } from "react";
-import "./App.css";
-import { messaging } from "./firebase";
-import { getToken } from "firebase/messaging";
-import { onMessageListener } from "./firebase";
-import axios from "axios";
-import { getMessaging, onMessage } from "firebase/messaging";
-import Example from "./components/WindowAlert";
-import Alert from "./components/Alert";
+import StripeCheckout from "react-stripe-checkout";
+import Button from "@mui/material/Button";
+import { useState } from "react";
 
 function App() {
-  const [notification, setNotification] = useState({ title: "", body: "" });
-  const [show, setShow] = useState();
-  const messaging = getMessaging();
-
-  const handleNotification = () => {
-    console.log("testing frontend");
-    const data = {
-      email: "hizbullahkhn@gmail.com",
-      password: "12345678",
-    };
-    var config = {
-      method: "get",
-      url: "http://[::1]:3000/hello",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      data: data,
-    };
-
-    axios(config)
-      .then(function (response) {
-        console.log("from backend" + response.data);
-      })
-      .catch(function (error) {
-        console.log("hhhhh" + error);
-      });
-  };
-
-  onMessage(messaging, (payload) => {
-    console.log("Message received. ", payload);
-    setNotification({
-      title: payload.notification.title,
-      body: payload.notification.body,
-      msgId: payload.messageId,
-    });
-    setShow(true);
+  const [product, setProduct] = useState({
+    name: "React from fb",
+    price: 10,
+    productBy: "facebook",
   });
-
-  useEffect(() => {
-    Notification.requestPermission();
-
-    function fetchToken() {
-      getToken(messaging, {
-        vapidKey:
-          "BESmOoaM4gsi9AG8ea6yEVUKc5fXwjkxbbtSQblX-GWQADJKpjUY_cxw2Ayuh2Osb2xJ6q3mQ-ZyzFgBtFWaA5Q",
-      })
-        .then((currentToken) => {
-          if (currentToken) {
-            console.log(currentToken);
-            return currentToken;
-          } else {
-            // Show permission request UI
-            console.log(
-              "No registration token available. Request permission to generate one."
-            );
-            // ...
-          }
-        })
-        .catch((err) => {
-          console.log("An error occurred while retrieving token. ", err);
-          // ...
-        });
+  const makePayment = async (token) => {
+    const body = {
+      product,
+      token,
+    };
+    try {
+      const res = await fetch(`http://[::1]:3000/payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      console.log("Response :", res);
+      const { status } = res;
+      console.log("Status:", status);
+    } catch (err) {
+      console.log("Catch Error", err);
     }
-    fetchToken();
-  }, []);
-
+  };
   return (
     <div className="App">
-      <button onClick={handleNotification}>Send Notification</button>
-      <h1>Push notifications</h1>
-      {show && (
-        <>
-          <Example title={notification.title} />
-          <Alert props={notification.title} toastId={notification.msgId} />
-        </>
-      )}
+      <StripeCheckout
+        token={makePayment}
+        stripeKey="pk_test_51KNvwbEJpWsAdIisL6XXxwtIL1w0SthCdNnXu0G06lBtUaAyeJhEUFJ7DM9dBVg7jsDDfoZud8ijrIew6kDChZmg009L5lVh1v"
+        name="buysomething"
+        amount={product.price * 100}
+      >
+        <Button variant="outlined">
+          Buy a Product for just {product.price}$
+        </Button>
+      </StripeCheckout>
     </div>
   );
 }
